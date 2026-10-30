@@ -1,6 +1,8 @@
 """Base class for decision trees with a scikit-learn like API."""
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 
 class BaseDecisionTree(ABC):
     """Skeleton shared by every tree variant (classification, regression, ...).
@@ -81,8 +83,26 @@ class BaseDecisionTree(ABC):
         Returns:
             BaseDecisionTree: ``self`` (the fitted estimator).
         """
-        raise NotImplementedError("TODO: implement fit")
 
+        # validate the hyperparameters and raise ``ValueError`` otherwise
+        if self.max_depth is not None and (not isinstance(self.max_depth, int) or self.max_depth < 0):
+            raise ValueError("max_depth must be None or a non-negative int")
+        if not isinstance(self.min_samples_split, int) or self.min_samples_split < 2:
+            raise ValueError("min_samples_split must be an int >= 2")
+        if self.criterion not in self._criteria:
+            raise ValueError(f"criterion must be one of {self._criteria}")
+
+        # convert ``X`` and ``y`` to arrays and check that they have the same number of samples
+        X = np.asarray(X, dtype=float)
+        y = np.asarray(y)
+        if X.shape[0] != y.shape[0]:
+            raise ValueError("X and y must have the same number of samples")
+
+        # call ``self._build_tree(X, y, depth=0)`` and store the returned node in ``self.root``
+        self.root = self._build_tree(X, y, depth=0)
+
+        # return in self
+        return self
     def predict(self, X):
         """Predict a target for each row of ``X``.
 
@@ -98,8 +118,38 @@ class BaseDecisionTree(ABC):
         Returns:
             array, shape (n_samples,): Predicted target for every sample.
         """
-        raise NotImplementedError("TODO: implement predict")
+        # si no se ha llamado a fit no hay arbol, entonces mandamos error
+        if self.root is None:
+            raise ValueError("Esta mal")
+        
+        # convertimos X a arreglo de numpy para poder sacar las filas y columnas
+        X = np.asarray(X, dtype=float)
 
+        # lista vacia de predicciones
+        predicciones = []
+
+        # recorremos cada fila de X
+        for i in range(len(X)):
+            fila = X[i]
+            # empezamos desde la raiz del arbol
+            nodo = self.root
+            # bajamos por el arbol mientras el nodo no sea hoja
+            while nodo.is_leaf == False:
+                columna = nodo.feature_index
+                umbral = nodo.threshold
+
+                # si el valor es menor o igual al umbral nos vamos a la izquierda
+                if fila[columna] <= umbral:
+                    nodo = nodo.left
+                    
+                # si no nos vamos a la derecha
+                else:
+                    nodo = nodo.right
+            # ya llegamos a una hoja, guardamos su valor como la prediccion
+            predicciones.append(nodo.value)
+        # regresamos todas las predicciones como arreglo
+        return np.array(predicciones)
+    
     def eval(self, X, y):
         """Score the model on ``(X, y)``.
 
@@ -114,7 +164,10 @@ class BaseDecisionTree(ABC):
             float: Metric value (accuracy for classification, R^2 for
             regression; higher is better).
         """
-        raise NotImplementedError("TODO: implement eval")
+        # pedimos las predicciones del modelo para X
+        y_pred = self.predict(X)
+        # y retornamos en el score de las predicciones contra los valores verdaderos
+        return self._score(np.asarray(y), y_pred)
 
     @abstractmethod
     def _build_tree(self, X, y, depth):
