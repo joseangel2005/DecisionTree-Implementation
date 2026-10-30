@@ -92,34 +92,33 @@ class DecisionTreeClassifier(BaseDecisionTree):
         """
         # keep the split with the largest gain over ``self._impurity(y)``
         n = len(y)
-        best_gain = 0.0
-        best_split = None
-        parent_impurity = self._impurity(y)
+        mejor_ganancia = 0.0
+        mejor_split = None
+        impureza_padre = self._impurity(y)
         # for each feature and candidate threshold
         for feature_index in range(X.shape[1]):
             values = np.unique(X[:, feature_index])
-    
+
             # midpoints between sorted unique values
             # sacamos los umbrales y con one-hot los valores solo son 0 y 1, asi que el umbral sale en 0.5 y la regla queda como que sea esa categoria o no
             thresholds = (values[:-1] + values[1:]) / 2
-            thresholds = (values[:-1] + values[1:]) / 2
             for threshold in thresholds:
                 # partition ``y`` into left (``x <= threshold``) and right
-                mask = X[:, feature_index] <= threshold
-                y_left = y[mask]
-                y_right = y[~mask]
+                filtro = X[:, feature_index] <= threshold
+                y_izq = y[filtro]
+                y_der = y[~filtro]
                 # skip splits leaving a side empty
-                if len(y_left) == 0 or len(y_right) == 0:
+                if len(y_izq) == 0 or len(y_der) == 0:
                     continue
                 # compute the weighted impurity ``(n_l * imp_l + n_r * imp_r) / n``
                 # Ec. 11, rem(d, D) = sum |D_d=l| / |D| * impureza(D_d=l)
-                rem = (len(y_left) * self._impurity(y_left) + len(y_right) * self._impurity(y_right)) / n
+                resto = (len(y_izq) * self._impurity(y_izq) + len(y_der) * self._impurity(y_der)) / n
                 # Ec. 12, IG(d, D) = impureza(D) - rem(d, D)
-                gain = parent_impurity - rem
-                if gain > best_gain:
-                    best_gain = gain
-                    best_split = (feature_index, float(threshold))
-        return best_split
+                ganancia = impureza_padre - resto
+                if ganancia > mejor_ganancia:
+                    mejor_ganancia = ganancia
+                    mejor_split = (feature_index, float(threshold))
+        return mejor_split
     
     def _leaf_value(self, y):
         """Return the majority (most frequent) class of y.
