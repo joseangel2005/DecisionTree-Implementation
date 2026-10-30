@@ -85,12 +85,12 @@ class BaseDecisionTree(ABC):
         """
 
         # validate the hyperparameters and raise ``ValueError`` otherwise
-        if self.max_depth is not None and (not isinstance(self.max_depth, int) or self.max_depth < 0):
-            raise ValueError("max_depth must be None or a non-negative int")
-        if not isinstance(self.min_samples_split, int) or self.min_samples_split < 2:
-            raise ValueError("min_samples_split must be an int >= 2")
+        if self.max_depth != None and self.max_depth < 0:
+            raise ValueError("max_depth no puede ser negativo")
+        if self.min_samples_split < 2:
+            raise ValueError("min_samples_split tiene que ser minimo 2")
         if self.criterion not in self._criteria:
-            raise ValueError(f"criterion must be one of {self._criteria}")
+            raise ValueError("ese criterio no existe")
 
         # convert ``X`` and ``y`` to arrays and check that they have the same number of samples
         X = np.asarray(X, dtype=float)
